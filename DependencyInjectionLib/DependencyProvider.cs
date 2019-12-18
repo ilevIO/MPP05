@@ -26,8 +26,49 @@ namespace DependencyInjectionLib
             }
             return false;
         }
+        /*public object ConvertList(List<object> items, Type type, bool performConversion = false)
+        {
+            var containedType = type.GenericTypeArguments.First();
+            var enumerableType = typeof(System.Linq.Enumerable);
+            var castMethod = enumerableType.GetMethod(nameof(System.Linq.Enumerable.Cast)).MakeGenericMethod(containedType);
+            var toListMethod = enumerableType.GetMethod(nameof(System.Linq.Enumerable.ToList)).MakeGenericMethod(containedType);
+
+            IEnumerable<object> itemsToCast;
+
+            if (performConversion)
+            {
+                itemsToCast = items.Select(item => Convert.ChangeType(item, containedType));
+            }
+            else
+            {
+                itemsToCast = items;
+            }
+
+            var castedItems = castMethod.Invoke(null, new[] { itemsToCast });
+
+            return toListMethod.Invoke(null, new[] { castedItems });
+        }*/
         public TDependency Resolve<TDependency>()
         {
+            /*if (TypeIsEnumerable(typeof(TDependency))) 
+            {
+                var instances = (List<object>)Resolve(typeof(TDependency));
+                var tDependency = typeof(TDependency).GetGenericArguments()[0];
+                return (TDependency)ConvertList(instances, typeof(TDependency), true);
+                //return instances.Select(item => Convert.ChangeType(item, containedType)).ToList().Cast<TDependency>();
+                /*TDependency second = instances.Cast<SomethingElse>();
+                return (TDependency)instances;
+                foreach (var instance in instances)
+                {
+                    try {
+                        var casted = Convert.ChangeType(instance, tDependency);
+                        
+                    } catch
+                    {
+                        //could not cast
+                    }
+                }
+            } */
             return (TDependency)(Resolve(typeof(TDependency)));
         }
         bool TypeIsEnumerable(Type type)
@@ -38,9 +79,9 @@ namespace DependencyInjectionLib
             }
             return false;
         }
-        IList<object> GetConstructedInstances(Type tImplementation)
+        List<object> GetConstructedInstances(Type tImplementation)
         {
-            IList<object> result = new List<object>();
+            List<object> result = new List<object>();
             var constructors = tImplementation.GetConstructors();
             foreach(ConstructorInfo constructor in constructors)
             {
@@ -72,6 +113,10 @@ namespace DependencyInjectionLib
             object result = null;
             int currThreadId = Thread.CurrentThread.ManagedThreadId;
             bool resolved = false;
+            if (isEnumerable)
+            {
+                tDependency = tDependency.GetGenericArguments()[0];
+            }
             if (!IsBeingResolved(tDependency, currThreadId))
             {
                 if (!inProcess.TryGetValue(currThreadId, out Stack<Type> currentStack))
@@ -83,12 +128,13 @@ namespace DependencyInjectionLib
                 IList<Implementation> implementations = dependencies.GetImplementationsFor(tDependency);
                 if (implementations != null)
                 {
-                    IList<object> instances = new List<object>();
+                    //IList<object> instances = new List<object>();
+                    var instances = (object[])Activator.CreateInstance(tDependency.MakeArrayType(), new object[] { implementations.Count() });
                     for (int i = 0; i < implementations.Count; i++)
                     {
-                        instances.Add(implementations[i].GetInstance(this));
+                        instances[i] = implementations[i].GetInstance(this);
                     }
-                    if (!isEnumerable)
+                    if (!isEnumerable && instances.Length > 0)
                     {
                         resolved = true;
                         result = instances.First();
@@ -103,14 +149,19 @@ namespace DependencyInjectionLib
                 } else
                 {
                     var instances = this.GetConstructedInstances(tDependency);
+                    var res = (object[])Activator.CreateInstance(tDependency.MakeArrayType(), new object[] { instances.Count() });
+                    for (int i = 0; i < res.Length; i++)
+                    {
+                        res[i] = instances[i];
+                    }
                     if (isEnumerable)
                     {
                         resolved = true;
-                        result = instances;
-                    } else
+                        result = res;
+                    } else if (res.Length > 0)
                     {
                         resolved = true;
-                        result = instances.First();
+                        result = res[0];
                     }
                 }
                 currentStack.Pop();

@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using DependencyInjectionLib;
+using System.Collections.Generic;
 
 namespace DepentencyInjectionTests
 {
@@ -37,15 +38,21 @@ namespace DepentencyInjectionTests
         {
         }
     }
+    class ServiceImpl2: IService
+    {
+        public ServiceImpl2()
+        {
 
+        }
+    }
     interface IRepository { }
     class RepositoryImpl: IRepository
     {
         public RepositoryImpl() { } // может иметь свои зависимости, опустим для простоты
     }
-    /// <summary>
+    /// 
     /// ///////////////////////////////////////////
-    /// </summary>
+    ///
     [TestClass]
     public class UnitTest1
     {
@@ -89,6 +96,38 @@ namespace DepentencyInjectionTests
             // RepositoryImpl (реализация IRepository)
             var service1 = provider.Resolve<IService>();
             Assert.IsNotNull(service1);
+        }
+        [TestMethod] 
+        public void NumerousImplsTest()
+        {
+            IList<Type> implTypes = new List<Type>();
+            implTypes.Add(typeof(ServiceImpl));
+            implTypes.Add(typeof(ServiceImpl2));
+
+            var dependencies = new DependenciesConfiguration();
+            dependencies.Register<IService, ServiceImpl>();
+            dependencies.Register<IService, ServiceImpl2>();
+
+            var provider = new DependencyProvider(dependencies);
+
+            // должен быть создан ServiceImpl (реализация IService), в конструктор которому передана
+            // RepositoryImpl (реализация IRepository)
+            var services =  provider.Resolve<IEnumerable<IService>>();//*/(List<IService>)provider.Resolve(typeof(List<IService>));// <List<IService>>();
+            Assert.IsNotNull(services);
+            //Assert.IsTrue(typeof(services[0].))
+            foreach (var implType in implTypes)
+            {
+                bool exists = false;
+                foreach (var service in services)
+                {
+                    if (service.GetType() == implType)
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+                Assert.IsTrue(exists);
+            }
         }
     }
 }
