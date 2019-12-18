@@ -6,9 +6,9 @@ namespace DependencyInjectionLib
 {
     public class Implementation
     {
-        Type type;
+        public Type type;
         object instance;
-        DependencyTTL dependencyTTL;
+        public DependencyTTL dependencyTTL;
         public object GetInstance(DependencyProvider provider)
         {
             if (this.dependencyTTL == DependencyTTL.SINGLETON)

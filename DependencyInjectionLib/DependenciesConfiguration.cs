@@ -25,13 +25,13 @@ namespace DependencyInjectionLib
         {
             this.Register(typeof(TDependency), typeof(TImplementation), dependencyTTL);
         }
-        void Register(Type tDependency, Type tImplementation, DependencyTTL dependencyTTL = DependencyTTL.IPD)
+        public void Register(Type tDependency, Type tImplementation, DependencyTTL dependencyTTL = DependencyTTL.IPD)
         {
             if (!Implementations.TryGetValue(tDependency, out IList<Implementation> implementations))
             {
                 implementations = new List<Implementation>();
             }
-            implementations.Add(new Implementation(tImplementation));
+            implementations.Add(new Implementation(tImplementation, dependencyTTL));
             Implementations[tDependency] = implementations;
         }
     }

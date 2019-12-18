@@ -129,5 +129,45 @@ namespace DepentencyInjectionTests
                 Assert.IsTrue(exists);
             }
         }
+        [TestMethod] 
+        public void SingletonTest()
+        {
+            var dependencies = new DependenciesConfiguration();
+            dependencies.Register<IService, ServiceImpl>(DependencyTTL.SINGLETON);
+
+            var provider = new DependencyProvider(dependencies);
+            var inst1 = provider.Resolve<IService>();
+            var inst2 = provider.Resolve<IService>();
+            Assert.AreSame(inst1, inst2);
+        }
+        interface IGeneric<T>
+        {
+        }
+        class GenericClass<T>: IGeneric<T>
+        {
+
+        }
+        [TestMethod]
+        public void GenericDependencyTest()
+        {
+            var dependencies = new DependenciesConfiguration();
+            dependencies.Register<IGeneric<Service3>, GenericClass<Service3>>();
+
+            var provider = new DependencyProvider(dependencies);
+            var inst1 = provider.Resolve<IGeneric<Service3>>();
+
+            Assert.AreEqual(typeof(GenericClass<Service3>), inst1.GetType());
+        }
+        [TestMethod]
+        public void OpenGenericDependencyTest()
+        {
+            var dependencies = new DependenciesConfiguration();
+            dependencies.Register(typeof(IGeneric<>), typeof(GenericClass<>));
+
+            var provider = new DependencyProvider(dependencies);
+            var inst1 = provider.Resolve<IGeneric<Service3>>();
+
+            Assert.AreEqual(typeof(GenericClass<Service3>), inst1.GetType());
+        }
     }
 }

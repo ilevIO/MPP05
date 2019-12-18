@@ -79,8 +79,23 @@ namespace DependencyInjectionLib
             }
             return false;
         }
+        private void ResolveIfContainsGenericParameter(ref Type type)
+        {
+            if (type.ContainsGenericParameters)
+            {
+                Type[] toResolve = type.GetGenericArguments();
+                Type[] genericParameters = toResolve.Select(dep =>
+                {
+                    var impls = dependencies.GetImplementationsFor(dep.BaseType)?.ToArray();
+                    return impls != null ? impls.First().type : dep.BaseType;
+                })
+                .ToArray();
+                type = type.MakeGenericType(genericParameters);
+            }
+        }
         List<object> GetConstructedInstances(Type tImplementation)
         {
+            ResolveIfContainsGenericParameter(ref tImplementation);
             List<object> result = new List<object>();
             var constructors = tImplementation.GetConstructors();
             foreach(ConstructorInfo constructor in constructors)
@@ -126,13 +141,34 @@ namespace DependencyInjectionLib
                 currentStack.Push(tDependency);
                 inProcess[currThreadId] = currentStack;
                 IList<Implementation> implementations = dependencies.GetImplementationsFor(tDependency);
+                if (implementations == null && tDependency.IsGenericType)
+                {
+                    implementations = dependencies.GetImplementationsFor(tDependency.GetGenericTypeDefinition());
+                }
                 if (implementations != null)
                 {
                     //IList<object> instances = new List<object>();
+                    var genericParams = tDependency.GetGenericArguments();
                     var instances = (object[])Activator.CreateInstance(tDependency.MakeArrayType(), new object[] { implementations.Count() });
                     for (int i = 0; i < implementations.Count; i++)
                     {
-                        instances[i] = implementations[i].GetInstance(this);
+                        //var templ = new Implementation(implementations[i].type.GetGenericTypeDefinition().MakeGenericType(genericParams),
+                        //implementations[i].dependencyTTL);
+                        Implementation templ;
+                        if (tDependency.IsGenericType)
+                        {
+                            templ = new Implementation(implementations[i].type.GetGenericTypeDefinition().MakeGenericType(genericParams),
+                                implementations[i].dependencyTTL);
+                        }
+                        else
+                        {
+                            templ = implementations[i];
+                        }
+                        var inst = templ.GetInstance(this);
+                        /*if (tDependency.IsGenericType) {
+                            inst = inst.GetType().GetGenericTypeDefinition().MakeGenericType(genericParams);
+                        }*/
+                        instances[i] = inst;
                     }
                     if (!isEnumerable && instances.Length > 0)
                     {
@@ -149,7 +185,19 @@ namespace DependencyInjectionLib
                 } else
                 {
                     var instances = this.GetConstructedInstances(tDependency);
-                    var res = (object[])Activator.CreateInstance(tDependency.MakeArrayType(), new object[] { instances.Count() });
+                    object[] res;
+                    if (!tDependency.ContainsGenericParameters)
+                    {
+                        res = (object[])Activator.CreateInstance(tDependency.MakeArrayType(), new object[] { instances.Count() });
+                    } else
+                    {
+                        res = new object[instances.Count];
+                        /*for (int i = 0; i < res.Length; i++)
+                        {
+                            res[i] = instances[i];
+                        }*/
+                    }
+
                     for (int i = 0; i < res.Length; i++)
                     {
                         res[i] = instances[i];
