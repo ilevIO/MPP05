@@ -15,7 +15,7 @@ namespace DependencyInjectionLib
     }
     public class DependenciesConfiguration
     {
-        ConcurrentDictionary<Type, IList<Implementation>> Implementations;
+        ConcurrentDictionary<Type, IList<Implementation>> Implementations = new ConcurrentDictionary<Type, IList<Implementation>>();
         public IList<Implementation> GetImplementationsFor(Type tDependency)
         {
             this.Implementations.TryGetValue(tDependency, out IList<Implementation> implementations);
@@ -27,8 +27,7 @@ namespace DependencyInjectionLib
         }
         void Register(Type tDependency, Type tImplementation, DependencyTTL dependencyTTL = DependencyTTL.IPD)
         {
-            IList<Implementation> implementations;
-            if (!Implementations.TryGetValue(tDependency, out implementations))
+            if (!Implementations.TryGetValue(tDependency, out IList<Implementation> implementations))
             {
                 implementations = new List<Implementation>();
             }
