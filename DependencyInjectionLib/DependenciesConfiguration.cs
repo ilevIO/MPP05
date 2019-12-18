@@ -21,18 +21,35 @@ namespace DependencyInjectionLib
             this.Implementations.TryGetValue(tDependency, out IList<Implementation> implementations);
             return implementations;
         }
+        bool RegistrationIsValid(Type tDependency, Type tImplementation)
+        {
+            if (tDependency.IsAssignableFrom(tImplementation) || (tDependency.IsGenericTypeDefinition && tImplementation.IsGenericTypeDefinition))
+            {
+                return true;
+            }
+            return false;
+        }
         public void Register<TDependency, TImplementation>(DependencyTTL dependencyTTL = DependencyTTL.IPD)
         {
             this.Register(typeof(TDependency), typeof(TImplementation), dependencyTTL);
         }
         public void Register(Type tDependency, Type tImplementation, DependencyTTL dependencyTTL = DependencyTTL.IPD)
         {
-            if (!Implementations.TryGetValue(tDependency, out IList<Implementation> implementations))
+            if (RegistrationIsValid(tDependency, tImplementation))
             {
-                implementations = new List<Implementation>();
+                if (!Implementations.TryGetValue(tDependency, out IList<Implementation> implementations))
+                {
+                    implementations = new List<Implementation>();
+                }
+                if (implementations.Where(impl => impl.type == tImplementation && impl.dependencyTTL == dependencyTTL).Count() == 0)
+                {
+                    implementations.Add(new Implementation(tImplementation, dependencyTTL));
+                    Implementations[tDependency] = implementations;
+                }
+            } else
+            {
+                throw new Exception("Is not valid");
             }
-            implementations.Add(new Implementation(tImplementation, dependencyTTL));
-            Implementations[tDependency] = implementations;
         }
     }
 }

@@ -147,6 +147,10 @@ namespace DepentencyInjectionTests
         {
 
         }
+        class GenericClass2<T> : IGeneric<T>
+        {
+
+        }
         [TestMethod]
         public void GenericDependencyTest()
         {
@@ -164,6 +168,18 @@ namespace DepentencyInjectionTests
             var dependencies = new DependenciesConfiguration();
             dependencies.Register(typeof(IGeneric<>), typeof(GenericClass<>));
 
+            var provider = new DependencyProvider(dependencies);
+            var inst1 = provider.Resolve<IGeneric<Service3>>();
+
+            Assert.AreEqual(typeof(GenericClass<Service3>), inst1.GetType());
+        }
+        [TestMethod]
+        public void MultipleGenericDependencyTest()
+        {
+            var dependencies = new DependenciesConfiguration();
+            dependencies.Register(typeof(IGeneric<>), typeof(GenericClass<>));
+            dependencies.Register(typeof(IGeneric<>), typeof(GenericClass2<>));
+            dependencies.Register<IRepository, RepositoryImpl>();
             var provider = new DependencyProvider(dependencies);
             var inst1 = provider.Resolve<IGeneric<Service3>>();
 
